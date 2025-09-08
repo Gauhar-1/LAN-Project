@@ -125,6 +125,45 @@ io.on('connection', (socket) => {
   //   }
   // });
 
+  // FILE TRANSFER SIGNALING EVENTS
+
+  // Offer from sender to receiver for file transfer
+  socket.on('file-transfer-offer', ({ toUserId, offer, fromUserId }) => {
+    const receiverSocketId = userSocketMap.get(toUserId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit('file-transfer-offer', { offer, fromUserId });
+    }
+  });
+
+  // Answer from receiver to sender for file transfer
+  socket.on('file-transfer-answer', ({ toUserId, answer, fromUserId }) => {
+    const senderSocketId = userSocketMap.get(toUserId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit('file-transfer-answer', { answer, fromUserId });
+    }
+  });
+
+  // ICE candidate from either peer during file transfer connection setup
+  socket.on('file-transfer-ice-candidate', ({ toUserId, candidate, fromUserId }) => {
+    const peerSocketId = userSocketMap.get(toUserId);
+    if (peerSocketId) {
+      io.to(peerSocketId).emit('file-transfer-ice-candidate', { candidate, fromUserId });
+    }
+  });
+
+  // Optional: Handle user disconnect cleanup if needed
+  socket.on('disconnect', () => {
+    // Remove user from userSocketMap if needed
+    for (let [userId, sId] of userSocketMap.entries()) {
+      if (sId === socket.id) {
+        userSocketMap.delete(userId);
+        console.log(`User disconnected and removed: ${userId}`);
+        break;
+      }
+    }
+  });
+  
+
   // ✅ Disconnect
   socket.on('disconnect', () => {
     const userId = socketUserMap[socket.id];
